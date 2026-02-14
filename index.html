@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大阪馬拉松與和歌山自駕療癒之旅 - 互動導覽</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom Chart Container Styling */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px;
+            max-height: 400px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 350px;
+            }
+        }
+        /* Custom Scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af; 
+        }
+    </style>
+    <!-- Chosen Palette: Warm Neutrals with Energetic Accents -->
+    <!-- Palette Hex Codes: Background #F5F5F4 (Stone 100), Primary #EA580C (Orange 600 - Marathon), Secondary #0D9488 (Teal 600 - Onsen), Text #1C1917 (Stone 900) -->
+    
+    <!-- Application Structure Plan: 
+         The application is designed as a 'Mission Dashboard' for the 4 travelers.
+         1. **Header**: High-level trip summary (Dates, Temps, Goal).
+         2. **Interactive Timeline (Left Col)**: A vertical navigation list representing the 5 days. Users click to reveal specific logistics.
+         3. **Dynamic Detail View (Center/Right Col)**: Displays the specific itinerary, dining, accommodation, and the new Gemini-powered travel tip generation feature.
+         4. **Data Visualization Dashboard (Bottom Section)**: 
+            - Weather Forecast (Line Chart): To aid packing strategy.
+            - Physical Load (Bar Chart): To visualize the effort vs. recovery phases.
+            - Activity Balance (Doughnut): To show the 'Work hard, play hard' mix.
+         5. **Route Flow (Visual Component)**: A CSS-based flow diagram for the Day 4 self-drive leg.
+         This structure allows users to toggle between specific daily logistics and the 'big picture' planning data.
+    -->
+    
+    <!-- Visualization & Content Choices: 
+         1. **Weather Forecast (Line Chart)**: Goal: Inform/Plan. Shows temp range (4-10C). Chart.js used. Justification: Line chart best for continuous data ranges.
+         2. **Physical Exertion (Bar Chart)**: Goal: Compare. Shows relative effort (5km vs 42km vs Rest). Chart.js used. Justification: Vertical bars make the Day 3 spike obvious.
+         3. **Trip Composition (Doughnut Chart)**: Goal: Inform/Balance. Shows split between Running, Driving, Relaxing. Chart.js used. Justification: Easy to see the 'Healing' portion size.
+         4. **Self-Drive Route (CSS Flow)**: Goal: Organize/Process. Shows the sequence of Day 4. HTML/Tailwind used. Justification: Linear progression from Osaka to Shirahama. No SVG used.
+         5. **Interactive Day Selector**: Goal: Navigate. Vanilla JS updates the DOM content based on the selected day index.
+         6. **Gemini API Integration**: Goal: Enhance/Update. Provides live, grounded travel tips for the current day's theme/location.
+    -->
+
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-stone-100 text-stone-800 font-sans antialiased selection:bg-orange-200">
+
+    <!-- App Container -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- Header Section -->
+        <header class="mb-10 text-center bg-white rounded-2xl shadow-sm p-8 border-t-8 border-orange-600">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="text-left">
+                    <h1 class="text-3xl md:text-4xl font-bold text-stone-900 mb-2">🏃‍♂️ 大阪馬拉松與和歌山自駕療癒之旅</h1>
+                    <p class="text-lg text-stone-600">2026年2月20日 - 2月24日 | 4位男士 | 全馬挑戰 + 秘境溫泉</p>
+                </div>
+                <div class="mt-6 md:mt-0 flex gap-4">
+                    <div class="bg-orange-50 px-6 py-3 rounded-xl border border-orange-100 text-center">
+                        <span class="block text-2xl font-bold text-orange-600">4-10°C</span>
+                        <span class="text-xs text-stone-500 font-bold uppercase">平均氣溫</span>
+                    </div>
+                    <div class="bg-teal-50 px-6 py-3 rounded-xl border border-teal-100 text-center">
+                        <span class="block text-2xl font-bold text-teal-600">42.195</span>
+                        <span class="text-xs text-stone-500 font-bold uppercase">公里挑戰</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-12">
+            
+            <!-- Left Column: Interactive Timeline Navigation -->
+            <nav class="lg:col-span-3 bg-white rounded-2xl shadow-sm p-6 h-fit sticky top-6">
+                <h3 class="text-stone-400 text-xs font-bold uppercase tracking-wider mb-4">行程導覽</h3>
+                <ul class="space-y-3" id="day-nav">
+                    <!-- Nav items generated by JS -->
+                </ul>
+            </nav>
+
+            <!-- Right Column: Dynamic Content Display -->
+            <main class="lg:col-span-9 bg-white rounded-2xl shadow-sm p-8 min-h-[500px] flex flex-col justify-between" id="content-area">
+                <!-- Content injected by JS -->
+            </main>
+
+        </div>
+
+        <!-- Data Visualization Section -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            
+            <!-- Chart 1: Physical Load -->
+            <div class="bg-white rounded-2xl shadow-sm p-6">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-stone-900">體能負荷預估</h3>
+                    <p class="text-sm text-stone-500">每日預估步行與跑步總距離 (KM)</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="loadChart"></canvas>
+                </div>
+                <p class="mt-4 text-xs text-stone-400 bg-stone-50 p-3 rounded">
+                    <strong>分析：</strong> Day 3 是體能極限，Day 4 與 Day 5 安排為低強度的恢復期，重點在於讓肌肉放鬆。
+                </p>
+            </div>
+
+            <!-- Chart 2: Trip Composition -->
+            <div class="bg-white rounded-2xl shadow-sm p-6">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-stone-900">行程主題佔比</h3>
+                    <p class="text-sm text-stone-500">時間與精力分配分析</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="compChart"></canvas>
+                </div>
+                <p class="mt-4 text-xs text-stone-400 bg-stone-50 p-3 rounded">
+                    <strong>平衡：</strong> 雖然核心是馬拉松，但「療癒」與「美食」佔據了超過一半的行程比重，確保這是一趟放鬆之旅。
+                </p>
+            </div>
+
+            <!-- Chart 3: Weather Strategy -->
+            <div class="bg-white rounded-2xl shadow-sm p-6">
+                <div class="mb-4">
+                    <h3 class="text-lg font-bold text-stone-900">穿著策略氣溫圖</h3>
+                    <p class="text-sm text-stone-500">大阪/和歌山 2月預測氣溫</p>
+                </div>
+                <div class="chart-container">
+                    <canvas id="weatherChart"></canvas>
+                </div>
+                <p class="mt-4 text-xs text-stone-400 bg-stone-50 p-3 rounded">
+                    <strong>建議：</strong> 賽事當天早晨極冷 (4°C)，務必準備拋棄式雨衣保暖。和歌山海邊風大，需防風外套。
+                </p>
+            </div>
+
+        </section>
+
+        <!-- Route Visualization (CSS Only) -->
+        <section class="mt-12 bg-white rounded-2xl shadow-sm p-8 border-l-8 border-teal-500">
+            <div class="mb-6">
+                <h3 class="text-xl font-bold text-stone-900">🚗 Day 4: 紀伊半島自駕動線</h3>
+                <p class="text-stone-500">從繁華都市到海濱秘境的轉換</p>
+            </div>
+            
+            <div class="flex flex-col md:flex-row justify-between items-center relative gap-8 md:gap-4">
+                <!-- Connector Line (Desktop) -->
+                <div class="hidden md:block absolute top-1/2 left-0 w-full h-1 bg-stone-200 -z-10 transform -translate-y-1/2"></div>
+
+                <!-- Step 1 -->
+                <div class="bg-white border-2 border-stone-200 p-4 rounded-xl w-full md:w-1/4 text-center shadow-sm z-10">
+                    <div class="text-3xl mb-2">🏙️</div>
+                    <h4 class="font-bold text-stone-800">大阪市區</h4>
+                    <p class="text-xs text-stone-500">上午取車出發</p>
+                </div>
+
+                <!-- Arrow Mobile -->
+                <div class="md:hidden text-stone-300 text-2xl">⬇️</div>
+
+                <!-- Step 2 -->
+                <div class="bg-white border-2 border-orange-200 p-4 rounded-xl w-full md:w-1/4 text-center shadow-sm z-10">
+                    <div class="text-3xl mb-2">🐱</div>
+                    <h4 class="font-bold text-orange-600">貴志站</h4>
+                    <p class="text-xs text-stone-500">探訪貓站長 (1.5hr)</p>
+                </div>
+
+                <!-- Arrow Mobile -->
+                <div class="md:hidden text-stone-300 text-2xl">⬇️</div>
+
+                <!-- Step 3 -->
+                <div class="bg-white border-2 border-stone-200 p-4 rounded-xl w-full md:w-1/4 text-center shadow-sm z-10">
+                    <div class="text-3xl mb-2">🛣️</div>
+                    <h4 class="font-bold text-stone-800">沿海自駕</h4>
+                    <p class="text-xs text-stone-500">阪和自動車道 (2.5hr)</p>
+                </div>
+
+                <!-- Arrow Mobile -->
+                <div class="md:hidden text-stone-300 text-2xl">⬇️</div>
+
+                <!-- Step 4 -->
+                <div class="bg-white border-2 border-teal-200 p-4 rounded-xl w-full md:w-1/4 text-center shadow-sm z-10">
+                    <div class="text-3xl mb-2">♨️</div>
+                    <h4 class="font-bold text-teal-600">南紀白濱</h4>
+                    <p class="text-xs text-stone-500">露天溫泉與豪華晚餐</p>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Data Store
+        const itineraryData = [
+            {
+                day: "Day 1",
+                date: "2/20 (五)",
+                title: "抵達與賽事準備",
+                theme: "blue", // UI highlight color
+                icon: "🛬",
+                main_location: "大阪市區 難波梅田",
+                morning: "抵達關西機場 (KIX) → 電車至大阪市區 → 酒店 Check-in",
+                afternoon: "輕量購物 (補給品) → 心齋橋/道頓堀散步熟悉環境",
+                dinner: "Carbo-loading 準備：輕食晚餐，避免油膩",
+                stay: "大阪市區 (難波/梅田) - 推薦設有大浴場的四人房",
+                details: "第一天重點在於減少移動疲勞。心齋橋人多，建議只做必要購物。四人房需提早確認床位配置。晚餐選擇清淡的和食，為腸胃減負。",
+                highlight: "四人住宿"
+            },
+            {
+                day: "Day 2",
+                date: "2/21 (六)",
+                title: "博覽會與 Carbo-loading",
+                theme: "orange",
+                icon: "🎽",
+                main_location: "大阪馬拉松博覽會 INTEX Osaka",
+                morning: "賽前慢跑：大阪城公園 (約5km) + 拉伸",
+                afternoon: "前往 INTEX 大阪領取號碼布 + 參觀博覽會 (需預留3-4小時)",
+                dinner: "高品質 Carbo-loading：高質素、易消化之餐廳 (如美美卯烏龍麵或高級意式麵食)",
+                stay: "大阪市區 (同上) - 四人同住",
+                details: "博覽會人潮眾多，建議領完物資盡快離開，避免久站消耗腿力。晚餐是賽前最後一餐，務必選擇高碳水、高品質的食物，為隔天儲備能量。",
+                highlight: "高質餐點"
+            },
+            {
+                day: "Day 3",
+                date: "2/22 (日)",
+                title: "大阪馬拉松日",
+                theme: "red",
+                icon: "🔥",
+                main_location: "大阪馬拉松起點與路線",
+                morning: "大阪馬拉松參賽 (起跑點：大阪府廳前)",
+                afternoon: "完賽 → 領取行李 → 前往市區溫泉 (Spa World) 放鬆肌肉",
+                dinner: "🎉 慶功宴：高質素、具地方特色的餐廳 (如高級串炸/精緻大阪燒)",
+                stay: "大阪市區 (同上) - 四人共享喜悅",
+                details: "這是旅程的高潮！完賽後的第一件事不是睡覺，而是冷熱交替浴或泡溫泉，能大幅減少隔天的痠痛。晚餐選擇高質素餐廳，好好犒賞自己和隊友！",
+                highlight: "慶功美食"
+            },
+            {
+                day: "Day 4",
+                date: "2/23 (一)",
+                title: "貓咪傳奇與秘境溫泉",
+                theme: "teal",
+                icon: "🐱",
+                main_location: "和歌山 澄泉旅館 南紀白濱溫泉",
+                morning: "大阪租車 → 和歌山貴志站 (探訪貓站長四代玉)",
+                afternoon: "秘境自駕：直奔南紀白濱溫泉區 (約2.5小時)",
+                dinner: "♨️ 澄泉旅館：高質素懷石料理 (在旅館內享用)",
+                stay: "南紀白濱：澄泉旅館 (四人住宿)",
+                details: "轉換心情的一天。下午抵達澄泉旅館後，應立即享受溫泉，舒緩馬拉松後的疲憊。晚餐的懷石料理是和歌山之行的高級享受。",
+                highlight: "澄泉住宿"
+            },
+            {
+                day: "Day 5",
+                date: "2/24 (二)",
+                title: "海景溫泉與返程",
+                theme: "indigo",
+                icon: "🌊",
+                main_location: "南紀白濱 崎之湯 千疊敷",
+                morning: "晨間恢復：白良濱沙灘散步 + 崎之湯 (海邊露天溫泉)",
+                afternoon: "參觀千疊敷/三段壁 → 駕車返回 KIX 機場還車",
+                dinner: "機上/機場簡餐",
+                stay: "溫暖的家",
+                details: "崎之湯距離海浪只有咫尺之遙，是極為難得的體驗。利用早晨時間徹底排毒，帶著對澄泉旅館的美好回憶返回香港。",
+                highlight: "完美句點"
+            }
+        ];
+
+        // State Management
+        let currentDayIndex = 0;
+
+        // DOM Elements
+        const navList = document.getElementById('day-nav');
+        const contentArea = document.getElementById('content-area');
+
+        // Gemini API Configuration
+        const apiKey = "";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+        // Helper for Tailwind colors
+        function getColor(theme) {
+            const map = {
+                'blue': 'blue',
+                'orange': 'orange',
+                'red': 'red',
+                'teal': 'teal',
+                'indigo': 'indigo'
+            };
+            return map[theme] || 'gray';
+        }
+        
+        // --- Gemini API Call Function with Exponential Backoff ---
+        async function fetchGeminiTip(prompt, maxRetries = 5) {
+            const outputDiv = document.getElementById('gemini-tip-output');
+            const button = document.getElementById('gemini-tip-button');
+            
+            if (!outputDiv || !button) return;
+
+            outputDiv.innerHTML = '<div class="text-center py-4 text-stone-500 flex items-center justify-center space-x-2"><div class="animate-spin rounded-full h-5 w-5 border-b-2 border-orange-600"></div><span class="text-sm">正在從網絡獲取最新資訊...</span></div>';
+            button.disabled = true;
+
+            const systemPrompt = "你是一位經驗豐富的日本旅遊專家，專門為高端旅行團提供建議。根據用戶提供的每日行程主題，請利用最新的網絡資訊，提供一個簡潔、實用且高質量的旅遊小貼士或當日活動的獨家建議。請保持專業且友善的語氣，結果必須在一個段落內完成。";
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                tools: [{ "google_search": {} }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+            };
+
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 429 && i < maxRetries - 1) {
+                            const delay = Math.pow(2, i) * 1000;
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            continue; // Retry
+                        }
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+
+                    if (candidate && candidate.content?.parts?.[0]?.text) {
+                        const text = candidate.content.parts[0].text;
+                        let sources = [];
+                        const groundingMetadata = candidate.groundingMetadata;
+
+                        if (groundingMetadata && groundingMetadata.groundingAttributions) {
+                            sources = groundingMetadata.groundingAttributions
+                                .map(attribution => ({
+                                    uri: attribution.web?.uri,
+                                    title: attribution.web?.title,
+                                }))
+                                .filter(source => source.uri && source.title)
+                                .slice(0, 3); // Limit to 3 sources for clean UI
+                        }
+
+                        let sourceHtml = '';
+                        if (sources.length > 0) {
+                            sourceHtml = `
+                                <h5 class="text-xs font-bold text-stone-500 mt-4 mb-2">參考來源 (Google 搜索):</h5>
+                                <ul class="text-xs space-y-1">
+                                    ${sources.map((src, idx) => `
+                                        <li class="truncate"><a href="${src.uri}" target="_blank" class="text-blue-600 hover:underline">${idx + 1}. ${src.title}</a></li>
+                                    `).join('')}
+                                </ul>
+                            `;
+                        }
+
+                        outputDiv.innerHTML = `
+                            <h4 class="text-lg font-bold text-stone-800 mb-3 flex items-center">
+                                <span class="text-orange-600 mr-2">🌟</span> Gemini 旅遊智慧
+                            </h4>
+                            <p class="text-stone-700 leading-relaxed">${text}</p>
+                            ${sourceHtml}
+                        `;
+                    } else {
+                        outputDiv.innerHTML = '<div class="p-4 bg-red-100 text-red-700 rounded-lg text-sm">抱歉，無法生成相關建議，請稍後再試。</div>';
+                    }
+                    break; // Success or non-retryable error, exit loop
+
+                } catch (error) {
+                    console.error("Gemini API Error:", error);
+                    if (i === maxRetries - 1) {
+                        outputDiv.innerHTML = '<div class="p-4 bg-red-100 text-red-700 rounded-lg text-sm">網絡錯誤或伺服器超時，請檢查網絡連線或重試。</div>';
+                    }
+                }
+            }
+            button.disabled = false;
+        }
+
+        // Render Navigation
+        function renderNav() {
+            navList.innerHTML = '';
+            itineraryData.forEach((item, index) => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                const isActive = index === currentDayIndex;
+                
+                let activeClass = isActive ? 'bg-orange-600 text-white shadow-md transform scale-105' : 'bg-stone-50 text-stone-600 hover:bg-stone-100';
+                
+                btn.className = `w-full text-left px-4 py-3 rounded-xl transition-all duration-200 flex items-center gap-3 ${activeClass}`;
+                btn.onclick = () => {
+                    currentDayIndex = index;
+                    renderNav();
+                    renderContent();
+                };
+                
+                btn.innerHTML = `
+                    <span class="text-xl">${item.icon}</span>
+                    <div>
+                        <div class="text-xs font-bold opacity-70">${item.day}</div>
+                        <div class="font-bold text-sm truncate">${item.title}</div>
+                    </div>
+                `;
+                li.appendChild(btn);
+                navList.appendChild(li);
+            });
+        }
+
+        // Render Content
+        function renderContent() {
+            const data = itineraryData[currentDayIndex];
+            
+            contentArea.classList.add('opacity-0', 'translate-y-2');
+            
+            setTimeout(() => {
+                contentArea.innerHTML = `
+                    <div class="border-b border-stone-100 pb-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
+                        <div>
+                            <span class="bg-${getColor(data.theme)}-100 text-${getColor(data.theme)}-700 px-3 py-1 rounded-full text-xs font-bold mb-2 inline-block">${data.date}</span>
+                            <h2 class="text-3xl font-bold text-stone-800">${data.title}</h2>
+                        </div>
+                        <div class="mt-4 md:mt-0 flex flex-col items-start md:items-end space-y-2">
+                            <button id="gemini-tip-button" class="flex items-center space-x-2 bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-full transition-colors duration-200 shadow-md shadow-teal-200">
+                                <span>✨ 獲取最新旅遊小貼士</span>
+                            </button>
+                            <div class="bg-stone-50 p-3 rounded-xl text-center min-w-[80px]">
+                                <div class="text-xs text-stone-400 font-bold uppercase">重點</div>
+                                <div class="text-stone-800 font-bold">${data.highlight}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <div class="bg-blue-50 w-10 h-10 rounded-full flex items-center justify-center text-blue-500 shrink-0 font-bold">AM</div>
+                                <div>
+                                    <h4 class="font-bold text-stone-800">上午行程</h4>
+                                    <p class="text-stone-600 text-sm leading-relaxed">${data.morning}</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="bg-orange-50 w-10 h-10 rounded-full flex items-center justify-center text-orange-500 shrink-0 font-bold">PM</div>
+                                <div>
+                                    <h4 class="font-bold text-stone-800">下午行程</h4>
+                                    <p class="text-stone-600 text-sm leading-relaxed">${data.afternoon}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <div class="bg-indigo-50 w-10 h-10 rounded-full flex items-center justify-center text-indigo-500 shrink-0 text-xl">🍽️</div>
+                                <div>
+                                    <h4 class="font-bold text-stone-800">晚餐推薦</h4>
+                                    <p class="text-stone-600 text-sm leading-relaxed">${data.dinner}</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="bg-teal-50 w-10 h-10 rounded-full flex items-center justify-center text-teal-500 shrink-0 text-xl">🏨</div>
+                                <div>
+                                    <h4 class="font-bold text-stone-800">住宿安排</h4>
+                                    <p class="text-stone-600 text-sm leading-relaxed">${data.stay}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="gemini-tip-output" class="p-6 bg-yellow-50 border-l-4 border-yellow-400 rounded-xl mb-6">
+                        <div class="text-stone-500 text-sm">點擊上方的「✨ 獲取最新旅遊小貼士」按鈕，讓AI為您即時生成關於當日行程的實用建議。</div>
+                    </div>
+
+                    <div class="bg-stone-50 p-6 rounded-xl border border-stone-100 mt-auto">
+                        <h4 class="text-sm font-bold text-stone-500 uppercase mb-2">💡 專家小貼士 (行程原有建議)</h4>
+                        <p class="text-stone-700 italic">"${data.details}"</p>
+                    </div>
+                `;
+                
+                contentArea.classList.remove('opacity-0', 'translate-y-2');
+                contentArea.classList.add('transition-all', 'duration-300', 'ease-out');
+
+                // Attach event listener for the new button
+                document.getElementById('gemini-tip-button').onclick = () => {
+                    const currentData = itineraryData[currentDayIndex];
+                    const prompt = `請提供關於 ${currentData.date} 的行程主題：${currentData.title}，以及關鍵地點：${currentData.main_location} 的最新旅遊小貼士或當前建議。`;
+                    fetchGeminiTip(prompt);
+                };
+            }, 100);
+        }
+
+        // Chart.js Implementations
+        function initCharts() {
+            const tooltipConfig = {
+                callbacks: {
+                    title: function(tooltipItems) {
+                        const item = tooltipItems[0];
+                        const label = item.chart.data.labels[item.dataIndex];
+                        return Array.isArray(label) ? label.join(' ') : label;
+                    }
+                }
+            };
+
+            new Chart(document.getElementById('loadChart'), {
+                type: 'bar',
+                data: {
+                    labels: [['Day 1', '抵達'], ['Day 2', '慢跑'], ['Day 3', '馬拉松'], ['Day 4', '自駕'], ['Day 5', '恢復']],
+                    datasets: [{
+                        label: '活動距離 (KM)',
+                        data: [5, 10, 45, 3, 4],
+                        backgroundColor: ['#d6d3d1', '#fb923c', '#ea580c', '#2dd4bf', '#818cf8'],
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false }, tooltip: tooltipConfig },
+                    scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false } } }
+                }
+            });
+
+            new Chart(document.getElementById('compChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['跑步與賽事', '溫泉與療癒', '交通自駕', '美食探索'],
+                    datasets: [{
+                        data: [35, 30, 20, 15],
+                        backgroundColor: ['#ea580c', '#0d9488', '#57534e', '#f59e0b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 10 } }, tooltip: tooltipConfig }
+                }
+            });
+
+            new Chart(document.getElementById('weatherChart'), {
+                type: 'line',
+                data: {
+                    labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'],
+                    datasets: [
+                        {
+                            label: '最高溫',
+                            data: [9, 10, 10, 9, 8],
+                            borderColor: '#ea580c',
+                            tension: 0.4
+                        },
+                        {
+                            label: '最低溫',
+                            data: [4, 5, 4, 4, 5],
+                            borderColor: '#3b82f6',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' }, tooltip: tooltipConfig },
+                    scales: { y: { min: 0, max: 15 } }
+                }
+            });
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            renderNav();
+            renderContent();
+            initCharts();
+        });
+
+    </script>
+</body>
+</html>
